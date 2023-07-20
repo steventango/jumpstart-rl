@@ -15,23 +15,20 @@ class JSRLAfterEvalCallback(BaseCallback):
         self.mean_rewards = np.full(policy.window_size, -np.inf, dtype=np.float32)
 
     def _on_step(self) -> bool:
-        self.logger.record("eval/horizon", self.policy.horizons[self.policy.horizon_step])
+        self.logger.record("jsrl/horizon", self.policy.horizons[self.policy.horizon_step])
         self.mean_rewards = np.roll(self.mean_rewards, 1)
         self.mean_rewards[0] = self.parent.last_mean_reward
         moving_mean_reward = np.mean(self.mean_rewards)
-        self.logger.record("eval/moving_mean_reward", moving_mean_reward)
+        self.logger.record("jsrl/moving_mean_reward", moving_mean_reward)
+        tolerated_moving_mean_reward = self.best_moving_mean_reward - self.policy.tolerance * np.abs(
+            self.best_moving_mean_reward
+        )
         if self.mean_rewards[-1] == -np.inf or self.policy.horizon <= 0:
             return
         elif self.best_moving_mean_reward == -np.inf:
             self.best_moving_mean_reward = moving_mean_reward
-        elif moving_mean_reward / self.best_moving_mean_reward - 1 < self.policy.tolerance:
-            horizon = self.policy.update_horizon()
-            if self.verbose:
-                print(f"Moving mean reward: {moving_mean_reward}")
-                print(f"Best moving mean reward: {self.best_moving_mean_reward}")
-                print(f"moving_mean_reward / self.best_moving_mean_reward - 1: {moving_mean_reward / self.best_moving_mean_reward - 1}")
-                print(f"Tolerance: {self.policy.tolerance}")
-                print(f"Updating horizon to {horizon}!")
+        elif moving_mean_reward > tolerated_moving_mean_reward:
+            self.policy.update_horizon()
         self.best_moving_mean_reward = max(self.best_moving_mean_reward, moving_mean_reward)
 
 
@@ -43,7 +40,7 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             guide_policy: BasePolicy = None,
             max_horizon: int = 0,
             horizons: List[int] = [0],
-            tolerance: float = None,
+            tolerance: float = 0.05,
             strategy: str = "curriculum",
             window_size: int = 3,
             eval_freq: int = 1000,
@@ -87,8 +84,8 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             :return: the model's action and the next hidden state
                 (used in recurrent policies)
             """
-            timesteps_lte_horizon = timesteps <= self.horizons[self.horizon_step]
-            timesteps_gt_horizon = timesteps > self.horizons[self.horizon_step]
+            timesteps_lte_horizon = timesteps <= self.horizon
+            timesteps_gt_horizon = timesteps > self.horizon
             if isinstance(observation, dict):
                 observation_lte_horizon = {k: v[timesteps_lte_horizon] for k, v in observation.items()}
                 observation_gt_horizon = {k: v[timesteps_gt_horizon] for k, v in observation.items()}
@@ -141,7 +138,6 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
                 self.horizon_step = np.random.choice(self.max_horizon)
             else:
                 raise ValueError(f"Unknown strategy: {self.strategy}")
-            return self.horizons[self.horizon_step]
 
     return JSRLPolicy
 
