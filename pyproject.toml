@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jsrl"
+version = "0.0.1"
+authors = [
+  { name="Steven Tang", email="stang5@ualberta.ca" },
+]
+description = "Implementation of Jump-Start Reinforcement Learning with Stable Baselines3."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "gymnasium>=0.28.1"
+    "stable-baselines3[extra]>=2.0.0"
+    "gymnasium-robotics>=1.2.2"
+]
+[project.urls]
+"Homepage" = "https://github.com/steventango/jumpstart-rl"
+"Bug Tracker" = "https://github.com/steventango/jumpstart-rl/issues"
