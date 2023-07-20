@@ -164,22 +164,27 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
             :return: A hybrid callback calling `callback` and performing evaluation.
             """
             callback = super()._init_callback(callback, progress_bar)
+            eval_callback = EvalCallback(
+                self.env,
+                callback_after_eval=JSRLAfterEvalCallback(
+                    self.policy,
+                    self.logger,
+                    verbose=self.verbose,
+                ),
+                eval_freq=self.policy.eval_freq,
+                n_eval_episodes=self.policy.n_eval_episodes,
+            )
             callback = CallbackList(
                 [
                     callback,
-                    EvalCallback(
-                        self.env,
-                        callback_after_eval=JSRLAfterEvalCallback(
-                            self.policy,
-                            self.logger,
-                            verbose=self.verbose,
-                        ),
-                        eval_freq=self.policy.eval_freq,
-                        n_eval_episodes=self.policy.n_eval_episodes,
-                    ),
+                    eval_callback,
                 ]
             )
             callback.init_callback(self)
+            default_record = eval_callback.logger.record
+            eval_callback.logger.record = lambda key, *args, **kwargs: default_record(
+                key.replace("eval/", "jsrl/"), *args, **kwargs
+            )
             return callback
 
         def predict(
