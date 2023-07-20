@@ -4,7 +4,7 @@ Implementation of [Jump-Start Reinforcement Learning](https://arxiv.org/abs/2204
 
 ## Usage
 
-See `train_jsrl.py` for an example of how to train SAC + JSRL on the `PointMaze-v3` environment.
+See `examples/train_jsrl.py` for an example of how to train SAC + JSRL on the `PointMaze-v3` environment.
 
 ## References
 
