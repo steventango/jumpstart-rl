@@ -95,19 +95,26 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
                 episode_start_lte_horizon = None
                 episode_start_gt_horizon = None
 
-            action_lte_horizon, state_lte_horizon = self.guide_policy.predict(
-                observation_lte_horizon, state_lte_horizon, episode_start_lte_horizon, deterministic
-            )
-            action_gt_horizon, state_gt_horizon = super().predict(
-                observation_gt_horizon, state_gt_horizon, episode_start_gt_horizon, deterministic
-            )
-            action = np.zeros((len(timesteps), *action_lte_horizon.shape[1:]), dtype=action_lte_horizon.dtype)
-            action[timesteps_lte_horizon] = action_lte_horizon
-            action[timesteps_gt_horizon] = action_gt_horizon
+            action = np.zeros((len(timesteps), *self.action_space.shape), dtype=self.action_space.dtype)
             if state is not None:
-                state = np.zeros((len(timesteps), *state_lte_horizon.shape[1:]), dtype=state_lte_horizon.dtype)
-                state[timesteps_lte_horizon] = state_lte_horizon
-                state[timesteps_gt_horizon] = state_gt_horizon
+                state = np.zeros((len(timesteps), *state.shape[1:]), dtype=state_lte_horizon.dtype)
+
+            if timesteps_lte_horizon.any():
+                action_lte_horizon, state_lte_horizon = self.guide_policy.predict(
+                    observation_lte_horizon, state_lte_horizon, episode_start_lte_horizon, deterministic
+                )
+                action[timesteps_lte_horizon] = action_lte_horizon
+                if state is not None:
+                    state[timesteps_lte_horizon] = state_lte_horizon
+
+            if timesteps_gt_horizon.any():
+                action_gt_horizon, state_gt_horizon = super().predict(
+                    observation_gt_horizon, state_gt_horizon, episode_start_gt_horizon, deterministic
+                )
+                action[timesteps_gt_horizon] = action_gt_horizon
+                if state is not None:
+                    state[timesteps_gt_horizon] = state_gt_horizon
+
             return action, state
 
         def update_horizon(self) -> None:
