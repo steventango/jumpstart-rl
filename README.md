@@ -2,6 +2,12 @@
 
 Implementation of [Jump-Start Reinforcement Learning](https://arxiv.org/abs/2204.02372) (JSRL) with [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
+## Installation
+
+```bash
+pip install jsrl
+```
+
 ## Usage
 
 See `examples/train_jsrl.py` for an example of how to train SAC + JSRL on the `PointMaze-v3` environment.
