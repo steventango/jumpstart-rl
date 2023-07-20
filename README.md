@@ -2,6 +2,10 @@
 
 Implementation of [Jump-Start Reinforcement Learning](https://arxiv.org/abs/2204.02372) (JSRL) with [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
+## Usage
+
+See `train_jsrl.py` for an example of how to train SAC + JSRL on the `PointMaze-v3` environment.
+
 ## References
 
 ```bibtex
@@ -20,5 +24,12 @@ Implementation of [Jump-Start Reinforcement Learning](https://arxiv.org/abs/2204
   number  = {268},
   pages   = {1-8},
   url     = {http://jmlr.org/papers/v22/20-1364.html}
+}
+@software{gymnasium_robotics2023github,
+  author = {Rodrigo de Lazcano and Kallinteris Andreas and Jun Jet Tai and Seungjae Ryan Lee and Jordan Terry},
+  title = {Gymnasium Robotics},
+  url = {http://github.com/Farama-Foundation/Gymnasium-Robotics},
+  version = {1.2.0},
+  year = {2023},
 }
 ```
