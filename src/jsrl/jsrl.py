@@ -24,10 +24,13 @@ class JSRLAfterEvalCallback(BaseCallback):
             return
         elif self.best_moving_mean_reward == -np.inf:
             self.best_moving_mean_reward = moving_mean_reward
-        elif 1 - moving_mean_reward / self.best_moving_mean_reward <= self.policy.tolerance:
+        elif moving_mean_reward / self.best_moving_mean_reward - 1 < self.policy.tolerance:
             horizon = self.policy.update_horizon()
-            # self.mean_rewards = np.full(3, -np.inf, dtype=np.float32)
             if self.verbose:
+                print(f"Moving mean reward: {moving_mean_reward}")
+                print(f"Best moving mean reward: {self.best_moving_mean_reward}")
+                print(f"moving_mean_reward / self.best_moving_mean_reward - 1: {moving_mean_reward / self.best_moving_mean_reward - 1}")
+                print(f"Tolerance: {self.policy.tolerance}")
                 print(f"Updating horizon to {horizon}!")
         self.best_moving_mean_reward = max(self.best_moving_mean_reward, moving_mean_reward)
 
@@ -42,6 +45,9 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             horizons: List[int] = [0],
             tolerance: float = None,
             strategy: str = "curriculum",
+            window_size: int = 3,
+            eval_freq: int = 1000,
+            n_eval_episodes: int = 20,
             **kwargs,
         ) -> None:
             super().__init__(*args, **kwargs)
