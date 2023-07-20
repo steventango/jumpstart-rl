@@ -12,7 +12,7 @@ class JSRLAfterEvalCallback(BaseCallback):
         self.policy = policy
         self.logger = logger
         self.best_moving_mean_reward = -np.inf
-        self.mean_rewards = np.full(3, -np.inf, dtype=np.float32)
+        self.mean_rewards = np.full(policy.window_size, -np.inf, dtype=np.float32)
 
     def _on_step(self) -> bool:
         self.logger.record("eval/horizon", self.policy.horizons[self.policy.horizon_step])
@@ -20,7 +20,7 @@ class JSRLAfterEvalCallback(BaseCallback):
         self.mean_rewards[0] = self.parent.last_mean_reward
         moving_mean_reward = np.mean(self.mean_rewards)
         self.logger.record("eval/moving_mean_reward", moving_mean_reward)
-        if self.mean_rewards[-1] == -np.inf:
+        if self.mean_rewards[-1] == -np.inf or self.policy.horizon <= 0:
             return
         elif self.best_moving_mean_reward == -np.inf:
             self.best_moving_mean_reward = moving_mean_reward
@@ -51,6 +51,13 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             self.horizon_step = 0
             self.max_horizon = max_horizon
             self.horizons = horizons
+            self.window_size = window_size
+            self.eval_freq = eval_freq
+            self.n_eval_episodes = n_eval_episodes
+
+        @property
+        def horizon(self):
+            return self.horizons[self.horizon_step]
 
         def predict(
             self,
@@ -165,8 +172,8 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
                             self.logger,
                             verbose=self.verbose,
                         ),
-                        eval_freq=1000,
-                        n_eval_episodes=10,
+                        eval_freq=self.policy.eval_freq,
+                        n_eval_episodes=self.policy.n_eval_episodes,
                     ),
                 ]
             )
