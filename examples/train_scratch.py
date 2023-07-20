@@ -17,7 +17,7 @@ def main():
         progress_bar=True,
         callback=EvalCallback(
             env,
-            best_model_save_path="models/sac_pointmaze_scratch"
+            best_model_save_path="examples/models/sac_pointmaze_scratch"
         ),
     )
 

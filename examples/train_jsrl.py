@@ -6,9 +6,9 @@ from jsrl import get_jsrl_algorithm
 
 
 def main():
-    max_horizon = 150
+    max_horizon = 100
     env = gym.make("PointMaze_UMaze-v3", continuing_task=False, max_episode_steps=max_horizon)
-    guide_policy = SAC.load("models/sac_pointmaze_guide/best_model").policy
+    guide_policy = SAC.load("examples/models/sac_pointmaze_guide/best_model").policy
     n = 10
     model = get_jsrl_algorithm(SAC)(
         "MultiInputPolicy",
@@ -28,7 +28,7 @@ def main():
         progress_bar=True,
         callback=EvalCallback(
             env,
-            best_model_save_path="models/sac_pointmaze_jsrl"
+            best_model_save_path="examples/models/sac_pointmaze_jsrl"
         ),
     )
 
