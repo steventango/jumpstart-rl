@@ -17,10 +17,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "gymnasium>=0.28.1"
     "stable-baselines3[extra]>=2.0.0"
+]
+
+[project.optional-dependencies]
+test = [
     "gymnasium-robotics>=1.2.2"
 ]
+
 [project.urls]
 "Homepage" = "https://github.com/steventango/jumpstart-rl"
 "Bug Tracker" = "https://github.com/steventango/jumpstart-rl/issues"
