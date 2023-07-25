@@ -16,10 +16,11 @@ def main():
         policy_kwargs=dict(
             guide_policy=guide_policy,
             max_horizon=max_horizon,
+            strategy="curriculum",
             horizons=np.arange(max_horizon, -1, -max_horizon // n,)
         ),
         verbose=1,
-        tensorboard_log="logs/pointmaze_jsrl"
+        tensorboard_log="logs/pointmaze_jsrl_curriculum"
     )
     model.learn(
         total_timesteps=1e5,
@@ -28,7 +29,7 @@ def main():
         callback=EvalCallback(
             env,
             n_eval_episodes=100,
-            best_model_save_path="examples/models/pointmaze_jsrl_TD3"
+            best_model_save_path="examples/models/pointmaze_jsrl_curriculum_TD3"
         ),
     )
 

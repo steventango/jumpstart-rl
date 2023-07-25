@@ -17,11 +17,15 @@ class JSRLAfterEvalCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         self.policy.jsrl_evaluation = False
+        self.logger.record("jsrl/horizon", self.policy.horizon)
+
+        if self.policy.strategy == "random":
+            return True
+
         self.mean_rewards = np.roll(self.mean_rewards, 1)
         self.mean_rewards[0] = self.parent.last_mean_reward
         moving_mean_reward = np.mean(self.mean_rewards)
 
-        self.logger.record("jsrl/horizon", self.policy.horizon)
         self.logger.record("jsrl/moving_mean_reward", moving_mean_reward)
         self.logger.record("jsrl/best_moving_mean_reward", self.best_moving_mean_reward)
         self.logger.record("jsrl/tolerated_moving_mean_reward", self.tolerated_moving_mean_reward)
@@ -93,13 +97,18 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             super().__init__(*args, **kwargs)
             self.guide_policy = guide_policy
             self.tolerance = tolerance
+            assert strategy in ["curriculum", "random"], f"strategy: '{strategy}' must be 'curriculum' or 'random'"
             self.strategy = strategy
             self.horizon_step = 0
             self.max_horizon = max_horizon
             self.horizons = horizons
+            assert window_size > 0, f"window_size: {window_size} must be greater than 0"
             self.window_size = window_size
             self.eval_freq = eval_freq
-            self.n_eval_episodes = n_eval_episodes
+            if self.strategy == "curriculum":
+                self.n_eval_episodes = n_eval_episodes
+            else:
+                self.n_eval_episodes = 0
             self.jsrl_evaluation = False
 
         @property
@@ -182,9 +191,7 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
                 self.horizon_step += 1
                 self.horizon_step = min(self.horizon_step, len(self.horizons) - 1)
             elif self.strategy == "random":
-                self.horizon_step = np.random.choice(self.max_horizon)
-            else:
-                raise ValueError(f"Unknown strategy: {self.strategy}")
+                self.horizons = [np.random.choice(self.max_horizon)]
 
     return JSRLPolicy
 
@@ -256,6 +263,8 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
 
             self._timesteps += 1
             self._timesteps[self.env.buf_dones] = 0
+            if self.policy.strategy == "random" and self.env.buf_dones.any():
+                self.policy.update_horizon()
             return action, state
 
     return JSRLAlgorithm
