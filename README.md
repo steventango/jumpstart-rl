@@ -10,7 +10,7 @@ pip install jsrl
 
 ## Usage
 
-See `examples/train_jsrl.py` for an example of how to train SAC + JSRL on the `PointMaze-v3` environment.
+See `examples/train_jsrl.py` for an example of how to train TD3 + JSRL on the `PointMaze-v3` environment.
 
 ## References
 
