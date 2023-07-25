@@ -16,13 +16,14 @@ class JSRLAfterEvalCallback(BaseCallback):
         self.mean_rewards = np.full(policy.window_size, -np.inf, dtype=np.float32)
 
     def _on_step(self) -> bool:
+        self.policy.jsrl_evaluation = False
         self.mean_rewards = np.roll(self.mean_rewards, 1)
         self.mean_rewards[0] = self.parent.last_mean_reward
         moving_mean_reward = np.mean(self.mean_rewards)
 
         self.logger.record("jsrl/horizon", self.policy.horizon)
         self.logger.record("jsrl/moving_mean_reward", moving_mean_reward)
-        self.logger.record("jsrl/best_moving_mean_reward", moving_mean_reward)
+        self.logger.record("jsrl/best_moving_mean_reward", self.best_moving_mean_reward)
         self.logger.record("jsrl/tolerated_moving_mean_reward", self.tolerated_moving_mean_reward)
         self.logger.dump(self.num_timesteps)
 
@@ -30,11 +31,13 @@ class JSRLAfterEvalCallback(BaseCallback):
             return True
         elif self.best_moving_mean_reward == -np.inf:
             self.best_moving_mean_reward = moving_mean_reward
-        elif moving_mean_reward > self.tolerated_moving_mean_reward:
+        elif moving_mean_reward >= self.tolerated_moving_mean_reward:
             self.policy.update_horizon()
-        if moving_mean_reward > self.best_moving_mean_reward:
-            self.best_moving_mean_reward = moving_mean_reward
+
+        if moving_mean_reward >= self.best_moving_mean_reward:
             self.tolerated_moving_mean_reward = moving_mean_reward - self.policy.tolerance * np.abs(moving_mean_reward)
+            self.best_moving_mean_reward = max(self.best_moving_mean_reward, moving_mean_reward)
+
         return True
 
 
@@ -42,6 +45,10 @@ class JSRLEvalCallback(EvalCallback):
     def init_callback(self, model: BaseAlgorithm) -> None:
         super().init_callback(model)
         self.logger = JSRLLogger(self.logger)
+
+    def _on_step(self) -> bool:
+        self.model.policy.jsrl_evaluation = True
+        return super()._on_step()
 
 
 class JSRLLogger():
@@ -76,9 +83,9 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             guide_policy: BasePolicy = None,
             max_horizon: int = 0,
             horizons: List[int] = [0],
-            tolerance: float = 0.05,
+            tolerance: float = 0.0,
             strategy: str = "curriculum",
-            window_size: int = 3,
+            window_size: int = 1,
             eval_freq: int = 1000,
             n_eval_episodes: int = 20,
             **kwargs,
@@ -93,6 +100,7 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             self.window_size = window_size
             self.eval_freq = eval_freq
             self.n_eval_episodes = n_eval_episodes
+            self.jsrl_evaluation = False
 
         @property
         def horizon(self):
@@ -120,8 +128,11 @@ def get_jsrl_policy(ExplorationPolicy: BasePolicy):
             :return: the model's action and the next hidden state
                 (used in recurrent policies)
             """
-            timesteps_lte_horizon = timesteps <= self.horizon
-            timesteps_gt_horizon = timesteps > self.horizon
+            horizon = self.horizon
+            if not self.training and not self.jsrl_evaluation:
+                horizon = 0
+            timesteps_lte_horizon = timesteps <= horizon
+            timesteps_gt_horizon = timesteps > horizon
             if isinstance(observation, dict):
                 observation_lte_horizon = {k: v[timesteps_lte_horizon] for k, v in observation.items()}
                 observation_gt_horizon = {k: v[timesteps_gt_horizon] for k, v in observation.items()}
@@ -186,6 +197,7 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
             else:
                 policy = policy
             policy = get_jsrl_policy(policy)
+            kwargs["learning_starts"] = 0
             super().__init__(policy, *args, **kwargs)
             self._timesteps = np.zeros((self.env.num_envs), dtype=np.int32)
 
@@ -209,6 +221,7 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
                 ),
                 eval_freq=self.policy.eval_freq,
                 n_eval_episodes=self.policy.n_eval_episodes,
+                verbose=self.verbose,
             )
             callback = CallbackList(
                 [
