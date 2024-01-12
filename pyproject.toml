@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jsrl"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { name="Steven Tang", email="stang5@ualberta.ca" },
 ]
