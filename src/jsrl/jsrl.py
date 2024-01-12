@@ -1,23 +1,28 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 from stable_baselines3.common.base_class import BaseAlgorithm, Logger
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import BasePolicy
 from stable_baselines3.common.type_aliases import MaybeCallback
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList, BaseCallback
 
 
 class JSRLAfterEvalCallback(BaseCallback):
-    def __init__(self, policy, logger, *args, **kwargs):
+    def __init__(self, policy, logger: Logger, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.policy = policy
-        self.logger = logger
+        self._logger = logger
         self.best_moving_mean_reward = -np.inf
         self.tolerated_moving_mean_reward = -np.inf
         self.mean_rewards = np.full(policy.window_size, -np.inf, dtype=np.float32)
 
+    @property
+    def logger(self) -> Logger:
+        return self._logger
+
     def _on_step(self) -> bool:
         self.policy.jsrl_evaluation = False
-        self.logger.record("jsrl/horizon", self.policy.horizon)
+        self._logger.record("jsrl/horizon", self.policy.horizon)
 
         if self.policy.strategy == "random":
             return True
@@ -26,10 +31,10 @@ class JSRLAfterEvalCallback(BaseCallback):
         self.mean_rewards[0] = self.parent.last_mean_reward
         moving_mean_reward = np.mean(self.mean_rewards)
 
-        self.logger.record("jsrl/moving_mean_reward", moving_mean_reward)
-        self.logger.record("jsrl/best_moving_mean_reward", self.best_moving_mean_reward)
-        self.logger.record("jsrl/tolerated_moving_mean_reward", self.tolerated_moving_mean_reward)
-        self.logger.dump(self.num_timesteps)
+        self._logger.record("jsrl/moving_mean_reward", moving_mean_reward)
+        self._logger.record("jsrl/best_moving_mean_reward", self.best_moving_mean_reward)
+        self._logger.record("jsrl/tolerated_moving_mean_reward", self.tolerated_moving_mean_reward)
+        self._logger.dump(self.num_timesteps)
 
         if self.mean_rewards[-1] == -np.inf or self.policy.horizon <= 0:
             return True
@@ -48,7 +53,11 @@ class JSRLAfterEvalCallback(BaseCallback):
 class JSRLEvalCallback(EvalCallback):
     def init_callback(self, model: BaseAlgorithm) -> None:
         super().init_callback(model)
-        self.logger = JSRLLogger(self.logger)
+        self._logger = JSRLLogger(self.logger)
+
+    @property
+    def logger(self) -> Logger:
+        return self._logger if hasattr(self, "_logger") else super().logger
 
     def _on_step(self) -> bool:
         self.model.policy.jsrl_evaluation = True
@@ -204,7 +213,8 @@ def get_jsrl_algorithm(Algorithm: BaseAlgorithm):
             else:
                 policy = policy
             policy = get_jsrl_policy(policy)
-            kwargs["learning_starts"] = 0
+            if isinstance(policy, OnPolicyAlgorithm):
+                kwargs["learning_starts"] = 0
             super().__init__(policy, *args, **kwargs)
             self._timesteps = np.zeros((self.env.num_envs), dtype=np.int32)
 
